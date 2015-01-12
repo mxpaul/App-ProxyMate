@@ -1,0 +1,14 @@
+.gitignore
+Changes
+lib/App/ProxyMate.pm
+makeall.sh
+Makefile.PL
+MANIFEST			This list of files
+MANIFEST.SKIP
+README.md
+t/00-load.t
+t/01-test-class-moose.t
+t/lib/ProxyMate.pm
+t/manifest.t
+t/pod-coverage.t
+t/pod.t
