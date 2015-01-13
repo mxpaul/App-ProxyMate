@@ -5,19 +5,13 @@ use Test::Class::Moose;
 use App::ProxyMate::TCPClient;
 use AnyEvent::MockTCPServer qw/:all/;
 use Data::Dumper;
+use Carp;
 
-#has server=> (is =>'rw');
 
-#sub startup {
-#	my $self = shift;
-#
-#}
-
-sub test_connection {
-	my $self= shift;
+sub mockserv_exitonconnect{
 
 	my $cv = AE::cv;
-	my $t; $t=AE::timer 0.1,0, sub { $cv->send('timeout'); undef $t };
+	my $t; $t=AE::timer 0.1,0, sub { $cv->send('timeout'); undef $t; BAIL_OUT( "tcp mock server exited for timeout, fix this!") };
 
 	my $server = AnyEvent::MockTCPServer->new(connections =>
 		[ # Expected connections sequence
@@ -27,11 +21,20 @@ sub test_connection {
 		],
 	);
 
-	my ($host, $port) = $server->connect_address;
+	return ($server->connect_address, $cv);
+	
+}
+
+sub test_connection {
+	my $self= shift;
+
+	my ($host, $port, $cv) = $self->mockserv_exitonconnect();
 	my $client = App::ProxyMate::TCPClient->new( host=>$host, port=>$port);
 
 	my $callback_called;
 	$client->connect( sub { 
+			my $first_arg = shift;
+			ok($first_arg, "Connect callback receives soething which is true on success");
 			$callback_called = 1;
 		}
 	);
