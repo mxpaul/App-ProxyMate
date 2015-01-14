@@ -7,10 +7,13 @@ use Mouse;
 use Carp;
 use AnyEvent;
 use AnyEvent::Socket;
+use AnyEvent::Handle;
 
 
 has host => (is=> 'rw');
 has port => (is=> 'rw');
+
+has hdl   => (is=> 'rw');
 
 
 no Mouse;
@@ -24,10 +27,33 @@ sub connect:method {
 	tcp_connect $self->host, $self->port, sub {
 		my ($fh) = @_
 			or $cb->( undef, "Connection failed: $!");
-		$cb->($fh);
-
+		$self->save_handle($fh);
+		$cb->($self);
 	}
 
+}
+
+sub save_handle {
+	my $self = shift;
+	my $fh   = shift;
+	
+	my $hdl; $hdl = AnyEvent::Handle->new(
+		fh       => $fh,
+		on_error => sub {
+			my ($hdl, $fatal, $msg) = @_;
+			#AE::log error => $msg;
+			$hdl->destroy;
+		}
+	);
+	$self->hdl($hdl);
+}
+
+sub send:method {
+	my $self = shift;
+	my $data = shift;
+
+	$self->hdl->push_write($data);
+	
 }
 
 1;

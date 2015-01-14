@@ -45,4 +45,32 @@ sub test_connection {
 	
 }
 
+sub test_send_data_to_server {
+
+	my ($request_string, $reply_string) = ('HELLO', 'BYE' );
+
+	my $server = AnyEvent::MockTCPServer->new(connections =>
+		[ # Expected connections sequence
+			[ # first connection
+				[ recv => $request_string, 'wait for "HELLO"' ],
+				[ send => $reply_string, 'send "BYE"' ],
+			],
+		],
+	);
+
+	my ($host,$port) = $server->connect_address;
+	my $client = App::ProxyMate::TCPClient->new( host=>$host, port=>$port);
+
+	my $send_hello_on_connect; $send_hello_on_connect = sub {
+		my $cl = shift;
+		fail 'client object should be passed into callback on successful connection' unless ref $cl eq ref $client;
+		$cl->send($request_string);
+	};
+
+	$client->connect( $send_hello_on_connect );
+	$server->finished_cv->recv;
+
+}
+
+
 1;
