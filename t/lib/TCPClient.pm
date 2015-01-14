@@ -72,5 +72,34 @@ sub test_send_data_to_server {
 
 }
 
+sub test_receive_data_from_server {
+
+	my ($request_string, $reply_string) = ('HELLO', 'BYE' );
+
+	my $server = AnyEvent::MockTCPServer->new(connections =>
+		[ # Expected connections sequence
+			[ # first connection
+				[ send => $reply_string, 'send "BYE"' ],
+			],
+		],
+	);
+
+	my ($host,$port) = $server->connect_address;
+	my $client = App::ProxyMate::TCPClient->new( host=>$host, port=>$port);
+	my $read_cv = AE::cv;
+	$client->on_read( sub {
+			warn 'on_read called';
+			my $data = shift;
+			$read_cv->send($data);
+		}
+	);
+
+	$client->connect( sub { BAIL_OUT("Connection failed, which is impossible!!!") unless $_[0]; warn 'Connected'; } );
+	$server->finished_cv->recv;
+	warn 'Server completed its sequence';
+	my $received_data = $read_cv->recv;
+	is($received_data, $reply_string, 'Received data from server via on_read callback');
+
+}
 
 1;

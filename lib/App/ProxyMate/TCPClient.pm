@@ -10,10 +10,11 @@ use AnyEvent::Socket;
 use AnyEvent::Handle;
 
 
-has host => (is=> 'rw');
-has port => (is=> 'rw');
+has host    => (is=> 'rw');
+has port    => (is=> 'rw');
 
-has hdl   => (is=> 'rw');
+has hdl     => (is=> 'rw');
+has on_read => (is=> 'rw'); 
 
 
 no Mouse;
@@ -41,9 +42,14 @@ sub save_handle {
 		fh       => $fh,
 		on_error => sub {
 			my ($hdl, $fatal, $msg) = @_;
-			#AE::log error => $msg;
+			AE::log error => $msg;
 			$hdl->destroy;
-		}
+		},
+		on_read => sub {
+			my $handle = shift;
+			$self->on_read->( $handle->{rbuf} );
+			$handle->{rbuf}='';
+		},
 	);
 	$self->hdl($hdl);
 }
