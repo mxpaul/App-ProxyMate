@@ -102,4 +102,37 @@ sub test_receive_data_from_server {
 
 }
 
+sub test_basic_error_handling {
+	my ($request_string, $reply_string) = ('HELLO', 'BYE' );
+
+	my $server = AnyEvent::MockTCPServer->new(connections =>
+		[ # Expected connections sequence
+			[ # first connection
+				[ recv => $request_string, 'wait for "HELLO"' ],
+			],
+		],
+	);
+
+	my ($host,$port) = $server->connect_address;
+	my $client = App::ProxyMate::TCPClient->new( host=>$host, port=>$port);
+
+	my $cv = AE::cv;
+	$client->on_client_gone( $cv );
+
+	$client->connect( sub {
+		my $cl = shift;
+		fail 'client object should be passed into callback on successful connection' unless ref $cl eq ref $client;
+		$cl->send($request_string);
+		}
+	);
+	$server->finished_cv->recv; # server closed connection at this point
+	$client->send('TRY TALK TO GONE CLIENT');
+
+	my ( $msg )	= $cv->recv;
+	ok($msg && length($msg), 'error message passed into client_gone callback') ;
+	ok(!ref $msg, 'scalar message passed into client_gone callback') ;
+	#diag "client gone error msg: $msg";
+
+}
+
 1;

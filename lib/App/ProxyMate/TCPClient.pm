@@ -10,11 +10,12 @@ use AnyEvent::Socket;
 use AnyEvent::Handle;
 
 
-has host    => (is=> 'rw');
-has port    => (is=> 'rw');
+has host           => (is=> 'rw');
+has port           => (is=> 'rw');
 
-has hdl     => (is=> 'rw');
-has on_read => (is=> 'rw'); 
+has hdl            => (is=> 'rw');
+has on_read        => (is=> 'rw'); 
+has on_client_gone => (is=> 'rw'); 
 
 
 no Mouse;
@@ -42,13 +43,20 @@ sub save_handle {
 		fh       => $fh,
 		on_error => sub {
 			my ($hdl, $fatal, $msg) = @_;
-			AE::log error => $msg;
+			carp "FIXME: not covered by tests";
+			$self->on_client_gone->($msg) if $self->on_client_gone;
 			$hdl->destroy;
 		},
 		on_read => sub {
 			my $handle = shift;
 			$self->on_read->( $handle->{rbuf} );
 			$handle->{rbuf}='';
+		},
+		on_eof => sub {
+			warn 'on_eof';
+			my ($hdl) = @_;
+			$self->on_client_gone->('EOF received') if $self->on_client_gone;
+			#$hdl->destroy;
 		},
 	);
 	$self->hdl($hdl);
