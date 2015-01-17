@@ -1,5 +1,44 @@
 #!/usr/bin/env perl
+#============================================================
+package Extended::Mock::Server;
+use Mouse;
+use Carp;
+use AnyEvent;
+#use AnyEvent::Socket;
+#use AnyEvent::Handle;
 
+
+has timeout => (is=> 'rw', default => 1); 
+has timer   => (is=> 'rw',); 
+has server  => (is=> 'rw',); 
+
+sub BUILD {
+	my $self = shift;
+
+	$self->timer( AE::timer $self->timeout,0, sub { undef $self->timer; fail( "tcp mock server exited for timeout") } );
+
+	$self->server (AnyEvent::MockTCPServer->new(connections =>
+		[ # Expected connections sequence
+			[ # first connection
+				[ code => sub { 'hey' }, 'received connect' ],
+			],
+		],
+	));
+
+}
+
+sub cvt {
+	my $after = shift // 1;
+	my $cv = AE::cv;
+	my $t; $t = AE::timer $after,0, sub { $cv->send( undef, 'condvar timed out'); };
+	$cv->cb(sub { $t = undef });
+	return $cv;
+}
+
+no Mouse;
+__PACKAGE__->meta->make_immutable;
+
+#============================================================
 package TestFor::TCPClient;
 use Test::Class::Moose;
 use App::ProxyMate::TCPClient;
@@ -8,42 +47,25 @@ use Data::Dumper;
 use Carp;
 
 
-sub mockserv_exitonconnect{
-
-	my $cv = AE::cv;
-	my $t; $t=AE::timer 0.1,0, sub { $cv->send('timeout'); undef $t; BAIL_OUT( "tcp mock server exited for timeout, fix this!") };
-
-	my $server = AnyEvent::MockTCPServer->new(connections =>
-		[ # Expected connections sequence
-			[ # first connection
-				[ code => sub { $cv->send('done') }, 'send "done" with condvar' ],
-			],
-		],
-	);
-
-	return ($server->connect_address, $cv);
-	
-}
-
 sub test_connection {
-	my $self= shift;
+	my $self     = shift;
+	my $mockserv = Extended::Mock::Server->new();
 
-	my ($host, $port, $cv) = $self->mockserv_exitonconnect();
+	my ($host, $port) = $mockserv->server->connect_address;
 	my $client = App::ProxyMate::TCPClient->new( host=>$host, port=>$port);
 
-	my $callback_called;
+	my $cv = AE::cv;
+	#my $cv = Extended::Mock::Server->cvt();
 	$client->connect( sub { 
 			my $first_arg = shift;
 			ok($first_arg, "Connect callback receives soething which is true on success");
-			$callback_called = 1;
+			$cv->send;
 		}
 	);
 
-	my $msg = $cv->recv;
-	is($msg,'done', 'Connect received in mock tcp server');
-	is($callback_called,1, 'TCPClient called its callback on connect');
-	
+	$cv->recv;
 }
+
 
 sub test_send_data_to_server {
 
