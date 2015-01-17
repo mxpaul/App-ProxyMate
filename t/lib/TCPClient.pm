@@ -110,15 +110,13 @@ sub test_receive_data_from_server {
 	my $client = App::ProxyMate::TCPClient->new( host=>$host, port=>$port);
 	my $read_cv = AE::cv;
 	$client->on_read( sub {
-			warn 'on_read called';
 			my $data = shift;
 			$read_cv->send($data);
 		}
 	);
 
-	$client->connect( sub { BAIL_OUT("Connection failed, which is impossible!!!") unless $_[0]; warn 'Connected'; } );
+	$client->connect( sub { BAIL_OUT("Connection failed, which is impossible!!!") unless $_[0]; } );
 	$server->finished_cv->recv;
-	warn 'Server completed its sequence';
 	my $received_data = $read_cv->recv;
 	is($received_data, $reply_string, 'Received data from server via on_read callback');
 

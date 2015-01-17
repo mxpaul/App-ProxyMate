@@ -53,7 +53,6 @@ sub save_handle {
 			$handle->{rbuf}='';
 		},
 		on_eof => sub {
-			warn 'on_eof';
 			my ($hdl) = @_;
 			$self->on_client_gone->('EOF received') if $self->on_client_gone;
 			#$hdl->destroy;
