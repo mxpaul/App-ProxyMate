@@ -20,7 +20,7 @@ has connection  => (is =>'rw', required => 1);
 sub BUILD {
 	my $self = shift;
 
-	$self->timer( AE::timer $self->timeout,0, sub { undef $self->timer; fail( "tcp mock server exited for timeout") } );
+	$self->timer( AE::timer $self->timeout,0, sub { undef $self->timer; $self->server->finished_cv->croak("tcp mock server exited for timeout") } );
 
 	my $connections;
 	if ( ref $self->connection eq 'ARRAY' ) {
@@ -37,13 +37,6 @@ sub BUILD {
 
 }
 
-sub cvt {
-	my $after = shift // 1;
-	my $cv = AE::cv;
-	my $t; $t = AE::timer $after,0, sub { $cv->send( undef, 'condvar timed out'); };
-	$cv->cb(sub { $t = undef });
-	return $cv;
-}
 
 no Mouse;
 __PACKAGE__->meta->make_immutable;
@@ -55,9 +48,18 @@ use App::ProxyMate::TCPClient;
 use AnyEvent::MockTCPServer qw/:all/;
 use Data::Dumper;
 use Carp;
+use AnyEvent;
 
 has request_string => ( is=> 'rw', default=> 'HELLO');
 has reply_string   => ( is=> 'rw', default=> 'BYE' );
+
+sub AE::cvt(;$){
+	my $after = shift || 1;
+	my $cv; 
+	my $t = AE::timer $after,0, sub { $cv->croak('condvar timed out'); };
+	$cv = AE::cv sub { undef $t };
+	return $cv;
+}
 
 sub test_connection {
 	my $self     = shift;
@@ -68,8 +70,7 @@ sub test_connection {
 	my ($host, $port) = $mockserv->server->connect_address;
 	my $client = App::ProxyMate::TCPClient->new( host=>$host, port=>$port);
 
-	my $cv = AE::cv;
-	#my $cv = Extended::Mock::Server->cvt();
+	my $cv = AE::cvt 1;
 	$client->connect( sub { 
 			my $first_arg = shift;
 			ok($first_arg, "Connect callback receives soething which is true on success");
@@ -110,7 +111,7 @@ sub test_receive_data_from_server {
 	my ($host, $port) = $mockserv->server->connect_address;
 	my $client = App::ProxyMate::TCPClient->new( host=>$host, port=>$port);
 
-	my $read_cv = AE::cv;
+	my $read_cv = AE::cvt 1;
 	$client->on_read( sub { $read_cv->send(@_); });
 
 	$client->connect( sub { BAIL_OUT("Connection failed, which is impossible!!!") unless $_[0]; } );
@@ -129,7 +130,7 @@ sub test_basic_error_handling {
 	my ($host, $port) = $mockserv->server->connect_address;
 	my $client = App::ProxyMate::TCPClient->new( host=>$host, port=>$port);
 
-	my $cv = AE::cv;
+	my $cv = AE::cvt 1;
 	$client->on_client_gone( $cv );
 
 	$client->connect( sub {
