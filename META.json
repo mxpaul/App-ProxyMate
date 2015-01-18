@@ -22,16 +22,23 @@
    "prereqs" : {
       "build" : {
          "requires" : {
+            "AnyEvent::MockTCPServer" : "0",
+            "Test::Class::Moose" : "0",
             "Test::More" : "0"
          }
       },
       "configure" : {
          "requires" : {
-            "ExtUtils::MakeMaker" : "0"
+            "ExtUtils::MakeMaker" : "0",
+            "ExtUtils::Manifest" : "0"
          }
       },
       "runtime" : {
          "requires" : {
+            "AnyEvent" : "0",
+            "AnyEvent::Handle" : "0",
+            "AnyEvent::Socket" : "0",
+            "Mouse" : "0",
             "perl" : "5.006"
          }
       }

@@ -1,6 +1,7 @@
 .gitignore
 Changes
 lib/App/ProxyMate.pm
+lib/App/ProxyMate/TCPClient.pm
 makeall.sh
 Makefile.PL
 MANIFEST			This list of files
@@ -9,6 +10,7 @@ README.md
 t/00-load.t
 t/01-test-class-moose.t
 t/lib/ProxyMate.pm
+t/lib/TCPClient.pm
 t/manifest.t
 t/pod-coverage.t
 t/pod.t

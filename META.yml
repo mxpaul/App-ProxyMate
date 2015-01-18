@@ -3,9 +3,12 @@ abstract: 'proxy of proxies with persistant connection pool'
 author:
   - 'Maxim Polyakov <mmonk@cpan.org>'
 build_requires:
+  AnyEvent::MockTCPServer: '0'
+  Test::Class::Moose: '0'
   Test::More: '0'
 configure_requires:
   ExtUtils::MakeMaker: '0'
+  ExtUtils::Manifest: '0'
 dynamic_config: 0
 generated_by: 'ExtUtils::MakeMaker version 6.84, CPAN::Meta::Converter version 2.143240'
 license: unknown
@@ -18,5 +21,9 @@ no_index:
     - t
     - inc
 requires:
+  AnyEvent: '0'
+  AnyEvent::Handle: '0'
+  AnyEvent::Socket: '0'
+  Mouse: '0'
   perl: '5.006'
 version: '0.01'
