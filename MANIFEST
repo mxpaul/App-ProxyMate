@@ -1,6 +1,7 @@
 .gitignore
 Changes
 lib/App/ProxyMate.pm
+lib/App/ProxyMate/Server.pm
 lib/App/ProxyMate/TCPClient.pm
 makeall.sh
 Makefile.PL
@@ -12,6 +13,7 @@ t/01-test-class-moose.t
 t/lib/Helper.pm
 t/lib/Helper/MockServer.pm
 t/lib/ProxyMate.pm
+t/lib/Server.pm
 t/lib/TCPClient.pm
 t/manifest.t
 t/pod-coverage.t
