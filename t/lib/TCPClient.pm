@@ -7,7 +7,7 @@ use AnyEvent;
 use Test::More;
 #use AnyEvent::Socket;
 #use AnyEvent::Handle;
-
+use Helper;
 
 has timeout => (is=> 'rw', default => 1); 
 has timer   => (is=> 'rw',); 
@@ -53,13 +53,6 @@ use AnyEvent;
 has request_string => ( is=> 'rw', default=> 'HELLO');
 has reply_string   => ( is=> 'rw', default=> 'BYE' );
 
-sub AE::cvt(;$){
-	my $after = shift || 1;
-	my $cv; 
-	my $t = AE::timer $after,0, sub { $cv->croak('condvar timed out'); };
-	$cv = AE::cv sub { undef $t };
-	return $cv;
-}
 
 sub test_connection {
 	my $self     = shift;
