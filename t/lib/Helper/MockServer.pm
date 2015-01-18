@@ -3,6 +3,7 @@ package Helper::MockServer;
 use Mouse;
 use Carp;
 use AnyEvent;
+use AnyEvent::MockTCPServer qw/:all/;
 
 has timeout => (is=> 'rw', default => 1); 
 has timer   => (is=> 'rw',); 

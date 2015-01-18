@@ -2,7 +2,6 @@
 package TestFor::TCPClient;
 use Test::Class::Moose;
 use App::ProxyMate::TCPClient;
-use AnyEvent::MockTCPServer qw/:all/;
 use Data::Dumper;
 use Carp;
 use AnyEvent;
