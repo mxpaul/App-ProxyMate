@@ -1,47 +1,4 @@
 #!/usr/bin/env perl
-#============================================================
-package Extended::Mock::Server;
-use Mouse;
-use Carp;
-use AnyEvent;
-use Test::More;
-#use AnyEvent::Socket;
-#use AnyEvent::Handle;
-use Helper;
-
-has timeout => (is=> 'rw', default => 1); 
-has timer   => (is=> 'rw',); 
-has server  => (is=> 'rw',); 
-
-has connection  => (is =>'rw', required => 1);
-
-
-
-sub BUILD {
-	my $self = shift;
-
-	$self->timer( AE::timer $self->timeout,0, sub { undef $self->timer; $self->server->finished_cv->croak("tcp mock server exited for timeout") } );
-
-	my $connections;
-	if ( ref $self->connection eq 'ARRAY' ) {
-		$connections = [ # Expected connections sequence
-			#[ # first connection
-				$self->connection,
-			#],
-		],
-	} else {
-		die "Fix this logic first!"
-	}
-
-	$self->server (AnyEvent::MockTCPServer->new(connections => $connections));
-
-}
-
-
-no Mouse;
-__PACKAGE__->meta->make_immutable;
-
-#============================================================
 package TestFor::TCPClient;
 use Test::Class::Moose;
 use App::ProxyMate::TCPClient;
@@ -50,13 +7,16 @@ use Data::Dumper;
 use Carp;
 use AnyEvent;
 
+use Helper::MockServer;
+use Helper qw(cvt); # This is really imported as AE::cvt
+
 has request_string => ( is=> 'rw', default=> 'HELLO');
 has reply_string   => ( is=> 'rw', default=> 'BYE' );
 
 
 sub test_connection {
 	my $self     = shift;
-	my $mockserv = Extended::Mock::Server->new(connection => [
+	my $mockserv = Helper::MockServer->new(connection => [
 		[ code => sub { 'hey' }, 'received connect' ],
 	]);
 
@@ -78,7 +38,7 @@ sub test_connection {
 sub test_send_data_to_server {
 	my $self     = shift;
 
-	my $mockserv = Extended::Mock::Server->new(connection => [
+	my $mockserv = Helper::MockServer->new(connection => [
 		[ recv => $self->request_string, 'wait for "HELLO"' ],
 		[ send => $self->reply_string, 'send "BYE"' ],
 	]);
@@ -98,7 +58,7 @@ sub test_send_data_to_server {
 sub test_receive_data_from_server {
 	my $self     = shift;
 
-	my $mockserv = Extended::Mock::Server->new(connection => [
+	my $mockserv = Helper::MockServer->new(connection => [
 		[ send => $self->reply_string, 'send "BYE"' ],
 	]);
 	my ($host, $port) = $mockserv->server->connect_address;
@@ -117,7 +77,7 @@ sub test_receive_data_from_server {
 sub test_basic_error_handling {
 	my $self     = shift;
 
-	my $mockserv = Extended::Mock::Server->new(connection => [
+	my $mockserv = Helper::MockServer->new(connection => [
 		[ recv => $self->request_string, 'wait for "HELLO"' ],
 	]);
 	my ($host, $port) = $mockserv->server->connect_address;
