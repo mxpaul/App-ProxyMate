@@ -9,6 +9,8 @@ MANIFEST.SKIP
 README.md
 t/00-load.t
 t/01-test-class-moose.t
+t/lib/Helper.pm
+t/lib/Helper/MockServer.pm
 t/lib/ProxyMate.pm
 t/lib/TCPClient.pm
 t/manifest.t
