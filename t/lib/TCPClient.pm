@@ -25,7 +25,7 @@ sub test_connection {
 	my $cv = AE::cvt 1;
 	$client->connect( sub { 
 			my $first_arg = shift;
-			ok($first_arg, "Connect callback receives soething which is true on success");
+			ok($first_arg, "Connect callback receives something which is true on success");
 			$cv->send;
 		}
 	);
