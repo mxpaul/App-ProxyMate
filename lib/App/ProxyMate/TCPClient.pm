@@ -30,7 +30,7 @@ sub connect:method {
 
 	tcp_connect $self->host, $self->port, sub {
 		my ($fh) = @_
-			or $cb->( undef, "Connection failed: $!");
+			or $cb->( undef, "Connection failed: $!"), return;
 		$self->connection(
 			App::ProxyMate::TCPConnection->new(fh=>$fh)
 		);
