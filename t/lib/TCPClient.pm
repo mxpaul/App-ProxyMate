@@ -2,6 +2,7 @@
 package TestFor::TCPClient;
 use Test::Class::Moose;
 use App::ProxyMate::TCPClient;
+#use App::ProxyMate::TCPConnection;
 use Data::Dumper;
 use Carp;
 use AnyEvent;

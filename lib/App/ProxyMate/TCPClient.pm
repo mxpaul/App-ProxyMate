@@ -9,11 +9,13 @@ use AnyEvent;
 use AnyEvent::Socket;
 use AnyEvent::Handle;
 
+use App::ProxyMate::TCPConnection;
+
 
 has host           => (is=> 'rw');
 has port           => (is=> 'rw');
 
-has hdl            => (is=> 'rw');
+has connection     => (is=> 'rw');
 has on_read        => (is=> 'rw'); 
 has on_client_gone => (is=> 'rw'); 
 
@@ -29,44 +31,19 @@ sub connect:method {
 	tcp_connect $self->host, $self->port, sub {
 		my ($fh) = @_
 			or $cb->( undef, "Connection failed: $!");
-		$self->save_handle($fh);
+		$self->connection(
+			App::ProxyMate::TCPConnection->new(fh=>$fh)
+		);
+		$self->connection->on_client_gone(sub { $self->on_client_gone->(@_) if $self->on_client_gone });
+		$self->connection->on_read(sub { $self->on_read->(@_) if $self->on_read });
 		$cb->($self);
 	}
 
 }
 
-sub save_handle {
-	my $self = shift;
-	my $fh   = shift;
-	
-	my $hdl; $hdl = AnyEvent::Handle->new(
-		fh       => $fh,
-		on_error => sub {
-			my ($hdl, $fatal, $msg) = @_;
-			carp "FIXME: not covered by tests";
-			$self->on_client_gone->($msg) if $self->on_client_gone;
-			$hdl->destroy;
-		},
-		on_read => sub {
-			my $handle = shift;
-			$self->on_read->( $handle->{rbuf} );
-			$handle->{rbuf}='';
-		},
-		on_eof => sub {
-			my ($hdl) = @_;
-			$self->on_client_gone->('EOF received') if $self->on_client_gone;
-			#$hdl->destroy;
-		},
-	);
-	$self->hdl($hdl);
-}
-
 sub send:method {
 	my $self = shift;
-	my $data = shift;
-
-	$self->hdl->push_write($data);
-	
+	$self->connection->send(@_);
 }
 
 1;
