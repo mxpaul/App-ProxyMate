@@ -38,7 +38,10 @@
             "AnyEvent" : "0",
             "AnyEvent::Handle" : "0",
             "AnyEvent::Socket" : "0",
+            "Daemond::Lite" : "0",
+            "EV" : "0",
             "Mouse" : "0",
+            "YAML" : "0",
             "perl" : "5.006"
          }
       }

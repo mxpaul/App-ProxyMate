@@ -1,5 +1,10 @@
 .gitignore
+bin/approxymate
+bootstrap/.gitignore
+bootstrap/README.md
 Changes
+etc/approxymate.conf
+ex/chkproxy.pl
 lib/App/ProxyMate.pm
 lib/App/ProxyMate/Server.pm
 lib/App/ProxyMate/TCPClient.pm
