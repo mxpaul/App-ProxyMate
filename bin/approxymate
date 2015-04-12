@@ -1,0 +1,106 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+our $VERSION = '0.01';
+
+use Data::Dumper;$Data::Dumper::Useqq = 1;
+use FindBin;
+use lib "$FindBin::Bin/../lib";
+use Daemond::Lite;
+use EV;
+use AnyEvent;
+use App::ProxyMate::TCPClient;
+use App::ProxyMate::Server;
+use Socket qw(inet_ntoa);
+
+name     'approxymate';
+config   "$FindBin::Bin/../etc/approxymate.conf";
+children 1;
+pid      '/tmp/%n.%u.pid';
+
+sub check {
+	my $self = shift;
+	my $cfg = $self->{cfg};
+	die "No 'server' hash defined in config: " . Dumper $cfg unless ref $cfg->{server} eq 'HASH';
+	$cfg->{server}{host} //= '0.0.0.0';
+	$cfg->{server}{port} //= 39999;
+	die "No 'proxy' hash defined in config: " . Dumper $cfg unless ref $cfg->{proxy} eq 'HASH';
+	die "No 'proxy{host}' defined in config: " . Dumper $cfg unless $cfg->{proxy}{host};
+	die "No 'proxy{port}' defined in config: " . Dumper $cfg unless $cfg->{proxy}{port};
+	$self->log->notice ("Config check ok" );
+}
+
+sub start {
+	my $self = shift;
+	my $server = App::ProxyMate::Server->new( %{$self->{cfg}{server}} );
+	$server->listen;
+	$server->on_client_connection( sub { 
+		if (my $fh = shift) {
+			my ($host, $port) = (inet_ntoa(shift),shift);
+			$self->log->info("Client connected: [%s:%d] ", $host, $port);
+			if ($self->{this}{proxy_connected} && ! $self->{this}{connection} ) {
+				my $connection = $self->{this}{connection} = App::ProxyMate::TCPConnection->new(fh=> $fh);
+				$connection->on_read( sub {
+						my $data = shift;
+						$self->log->notice('Client sent: ' . $data);
+						$self->{this}{proxy}->send($data);
+					}
+				);
+				$connection->on_client_gone( sub {
+					$self->log->error("Client gone [%s:%d]", $host, $port);
+					delete $self->{this}{connection};
+				});
+				$self->{this}{proxy}->on_read( sub {
+						my $data = shift;
+						$self->log->notice('Proxy sent: ' . $data);
+						$connection->send($data);
+					}
+				);
+			} else {
+				$self->log->err(
+					"Proxy not connected or busy by another connection, drop client conection (sorry, this is a dumb server)"
+				);
+				close $fh;
+			}
+		} else {
+			$self->log->error("Something wrong with connection");
+		}
+	});
+	$self->{this}{server} = $server;
+}
+
+sub run{
+	my $self = shift;
+	$self->{this}{server}->accept;
+	my $proxy = $self->{cfg}{proxy};
+	$self->{this}{proxy} = App::ProxyMate::TCPClient->new( %$proxy); 
+	$self->{this}{proxy}->on_client_gone( sub { 
+		$self->{this}{proxy}->on_read(undef);
+		$self->{this}{proxy_connected} = 0;
+	});
+	$self->{this}{proxy}->connect( sub {
+		#$self->log->info("Proxy connected: " . Dumper \@_);
+		my $client = shift;
+		if ($client) {
+			$self->{this}{proxy_connected} = 1;
+		} else {
+			$self->log->error("Failed connecting to proxy $proxy->{host}:$proxy->{port}: $!". Dumper \@_);
+			EV::unloop;
+		}
+	});
+	EV::loop();
+	warn "$$ gone $!";
+}
+
+sub stop {
+	my $self = shift;
+	$self->log->error("Child $$ exiting");
+	EV::unloop();
+	return;
+}
+
+runit;
+
+1;
